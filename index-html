@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRZ Panel</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        
+        body { 
+            background-color: #050505; 
+            background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 70%);
+            color: #ffffff; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+        
+        /* القائمة الجانبية */
+        .sidebar { 
+            width: 260px; 
+            background: rgba(10, 10, 10, 0.95); 
+            backdrop-filter: blur(10px);
+            border-left: 1px solid #222; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px 0; 
+            overflow-y: auto; 
+            z-index: 10;
+        }
+        .logo { 
+            font-size: 24px; font-weight: 900; text-align: center; padding-bottom: 20px; 
+            border-bottom: 1px solid #222; margin-bottom: 20px; letter-spacing: 1px; 
+            color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+        .nav-item { 
+            padding: 16px 20px; cursor: pointer; transition: all 0.3s ease; 
+            border-right: 3px solid transparent; color: #888; font-size: 16px; font-weight: 700;
+        }
+        .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: #fff; padding-right: 25px; }
+        .nav-item.active { 
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1)); 
+            color: #fff; border-right: 4px solid #fff; box-shadow: -5px 0 15px rgba(255, 255, 255, 0.1);
+        }
+        
+        .vip-locked { color: #555; position: relative; }
+        .vip-locked::after { content: '🔒'; position: absolute; left: 20px; opacity: 0.5; }
+
+        /* المحتوى الرئيسي */
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* البطاقات */
+        .card { 
+            background: linear-gradient(145deg, #0f0f0f, #070707); border: 1px solid #222; 
+            border-radius: 12px; padding: 30px; max-width: 650px; margin: 0 auto; width: 100%; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+        .card h2 { margin-bottom: 20px; font-size: 22px; border-bottom: 1px solid #222; padding-bottom: 15px; color: #fff; font-weight: 900; }
+        .card p.desc { color: #aaa; font-size: 14px; margin-bottom: 20px; }
+        
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: #aaa; font-weight: 700; }
+        
+        input[type="text"], input[type="password"], input[type="number"] { 
+            width: 100%; padding: 15px; background-color: #000; border: 1px solid #333; 
+            color: #fff; border-radius: 8px; outline: none; transition: all 0.3s ease; font-size: 16px;
+        }
+        input:focus { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.15); background-color: #0a0a0a; }
+        
+        .checkbox-group { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; cursor: pointer; }
+        .checkbox-group input { width: 22px; height: 22px; accent-color: #fff; cursor: pointer; }
+        .checkbox-group label { margin-bottom: 0; cursor: pointer; color: #ddd; font-size: 16px; }
+
+        button { 
+            width: 100%; padding: 16px; background-color: #fff; color: #000; border: 2px solid #fff; 
+            border-radius: 8px; font-weight: 900; cursor: pointer; transition: all 0.3s ease; 
+            margin-top: 10px; font-size: 16px; letter-spacing: 1px;
+        }
+        button:hover { background-color: transparent; color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+
+        /* الكونسول */
+        .console { 
+            background-color: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; 
+            height: 200px; overflow-y: auto; margin-top: 25px; font-family: monospace; 
+            font-size: 14px; direction: ltr; text-align: left; box-shadow: inset 0 0 20px rgba(0,0,0,1);
+        }
+        .console p { margin-bottom: 8px; color: #666; border-left: 2px solid #333; padding-left: 10px; }
+        .console p.success { color: #fff; border-color: #fff; }
+        .console p.error { color: #ff3333; border-color: #ff3333; }
+        
+        .token-status { font-size: 14px; margin-top: 5px; color: #aaa; font-weight: bold; }
+
+        /* التصميم المتجاوب للجوال */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; overflow-y: auto; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; white-space: nowrap; padding: 10px; border-left: none; border-bottom: 1px solid #222; height: auto; }
+            .logo { display: none; } 
+            .nav-item { padding: 12px 15px; border-right: none; border-bottom: 3px solid transparent; font-size: 14px; }
+            .nav-item:hover { padding-right: 15px; }
+            .nav-item.active { border-right: none; border-bottom: 3px solid #fff; box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1); }
+            .vip-locked::after { left: 5px; top: 5px; font-size: 12px; }
+            .main-content { padding: 20px 15px; height: auto; overflow: visible; }
+            .card { padding: 20px; margin-bottom: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- القائمة الجانبية -->
+    <div class="sidebar">
+        <div class="logo">LRZ Panel</div>
+        <div class="nav-item active" onclick="switchTab('nuke', this)">نيوك</div>
+        <div class="nav-item" onclick="switchTab('massspam', this)">سبام رسائل</div>
+        <div class="nav-item" onclick="switchTab('webhook', this)">سبام ويب هوك</div>
+        <div class="nav-item" onclick="switchTab('report', this)">سبام بلاغات</div>
+        <div class="nav-item" onclick="switchTab('banuser', this)">باند شخص</div>
+        <div class="nav-item" onclick="switchTab('nukeuser', this)">تدمير حساب</div>
+        <div class="nav-item" onclick="switchTab('clone', this)">نسخ سيرفر</div>
+        <div class="nav-item" onclick="switchTab('2fa', this)">مولد 2FA</div>
+        <div class="nav-item" onclick="switchTab('scanner', this)">فحص الملفات</div>
+        <div class="nav-item" onclick="switchTab('admin', this)">لوحة الإدارة</div>
+        <div class="nav-item vip-locked" id="vipTabNav" onclick="switchTab('vip', this)">أدوات VIP</div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        
+        <!-- قسم النيوك -->
+        <div id="nuke" class="tab-content active">
+            <div class="card">
+                <h2>نيوك السيرفر</h2>
+                <p class="desc">تدمير شامل للسيرفر: حظر الجميع، تغيير الأسماء، حذف الرومات والرتب، وإنشاء رومات سبام.</p>
+                <div class="input-group">
+                    <label>توكن البوت (Bot Token)</label>
+                    <input type="password" id="nuke-token" placeholder="ضع توكن البوت هنا..." oninput="validateToken('nuke')">
+                    <div class="token-status" id="nuke-status"></div>
+                </div>
+                
+                <div class="input-group"><label>ID السيرفر</label><input type="text" id="nuke-guild" placeholder="Guild ID"></div>
+                <div class="input-group"><label>الاسم الجديد للسيرفر (اختياري)</label><input type="text" id="nuke-name" placeholder="New Name"></div>
+                <div class="input-group"><label>تغيير اسم الأعضاء إلى (اختياري)</label><input type="text" id="nuke-nickname" placeholder="مثال: تم تدميرك"></div>
+                <div class="input-group"><label>عدد الرومات (أقصى حد 100)</label><input type="number" id="nuke-channels" value="50" max="100"></div>
+                <div class="input-group"><label>رسالة السبام</label><input type="text" id="nuke-msg" value="@everyone NUKED BY LRZ"></div>
+                <div class="input-group"><label>عدد المنشنات</label><input type="number" id="nuke-mentions" value="1" max="10"></div>
+                
+                <div class="checkbox-group"><input type="checkbox" id="nuke-banall" checked><label>Ban All (حظر الجميع)</label></div>
+                <div class="checkbox-group"><input type="checkbox" id="nuke-delroles" checked><label>حذف جميع الرتب</label></div>
+                <div class="checkbox-group"><input type="checkbox" id="nuke-delchannels" checked><label>حذف جميع القنوات</label></div>
+                
+                <button onclick="sendAction('nuke', 'nuke')">تنفيذ النيوك</button>
+            </div>
+        </div>
+
+        <!-- قسم سبام رسائل -->
+        <div id="massspam" class="tab-content">
+            <div class="card">
+                <h2>سبام رسائل</h2>
+                <p class="desc">إرسال رسائل سريعة ومتكررة في قناة معينة. يعمل على توكن بوت أو بشر.</p>
+                <div class="input-group">
+                    <label>التوكن (Bot or User Token)</label>
+                    <input type="password" id="spam-token" placeholder="ضع التوكن هنا..." oninput="validateToken('spam')">
+                    <div class="token-status" id="spam-status"></div>
+                </div>
+                <div class="input-group"><label>ID الروم</label><input type="text" id="spam-channel" placeholder="Channel ID"></div>
+                <div class="input-group"><label>الرسالة</label><input type="text" id="spam-msg" placeholder="الرسالة"></div>
+                <div class="input-group"><label>عدد الرسائل</label><input type="number" id="spam-amount" value="10"></div>
+                <div class="checkbox-group"><input type="checkbox" id="spam-mention"><label>منشن @everyone</label></div>
+                <button onclick="sendAction('spam', 'mass_spam')">بدء السبام</button>
+            </div>
+        </div>
+
+        <!-- قسم سبام ويب هوك -->
+        <div id="webhook" class="tab-content">
+            <div class="card">
+                <h2>سبام ويب هوك</h2>
+                <p class="desc">إرسال مئات الرسائل عبر رابط ويب هوك. (لا يحتاج توكن).</p>
+                <div class="input-group"><label>رابط الويب هوك</label><input type="text" id="wh-url" placeholder="https://discord.com/api/webhooks/..."></div>
+                <div class="input-group"><label>الرسالة</label><input type="text" id="wh-msg" placeholder="الرسالة"></div>
+                <div class="input-group"><label>عدد الرسائل</label><input type="number" id="wh-amount" value="10"></div>
+                <button onclick="sendAction('webhook', 'spam')">بدء السبام</button>
+            </div>
+        </div>
+
+        <!-- قسم سبام بلاغات -->
+        <div id="report" class="tab-content">
+            <div class="card">
+                <h2>سبام بلاغات</h2>
+                <p class="desc">إرسال بلاغات كاذبة بكثرة لإيقاف حساب أو سيرفر. (يتطلب توكن بشري فقط - User Token).</p>
+                <div class="input-group">
+                    <label>توكن بشري (User Token)</label>
+                    <input type="password" id="report-token" placeholder="User Token..." oninput="validateToken('report')">
+                    <div class="token-status" id="report-status"></div>
+                </div>
+                <div class="input-group"><label>ID السيرفر</label><input type="text" id="report-guild" placeholder="Guild ID"></div>
+                <div class="input-group"><label>ID الشخص أو السيرفر المراد التبليغ عنه</label><input type="text" id="report-user" placeholder="User/Guild ID"></div>
+                <div class="input-group"><label>السبب</label><input type="text" id="report-reason" value="Scam / Raid / Illegal Activities"></div>
+                <div class="input-group"><label>عدد البلاغات</label><input type="number" id="report-amount" value="50"></div>
+                <button onclick="sendAction('report', 'report_spam')">إرسال البلاغات</button>
+            </div>
+        </div>
+
+        <!-- قسم باند شخص -->
+        <div id="banuser" class="tab-content">
+            <div class="card">
+                <h2>باند شخص من السيرفر</h2>
+                <p class="desc">حظر شخص معين من سيرفر تملك فيه صلاحيات.</p>
+                <div class="input-group">
+                    <label>توكن البوت (Bot Token)</label>
+                    <input type="password" id="banuser-token" placeholder="ضع توكن البوت هنا..." oninput="validateToken('banuser')">
+                    <div class="token-status" id="banuser-status"></div>
+                </div>
+                <div class="input-group"><label>ID السيرفر</label><input type="text" id="banuser-guild" placeholder="Guild ID"></div>
+                <div class="input-group"><label>ID الشخص</label><input type="text" id="banuser-userid" placeholder="User ID"></div>
+                <button onclick="sendAction('banuser', 'ban')">حظر الشخص</button>
+            </div>
+        </div>
+
+        <!-- قسم تدمير حساب -->
+        <div id="nukeuser" class="tab-content">
+            <div class="card">
+                <h2>تدمير حساب (Nuke User)</h2>
+                <p class="desc">تخريب حساب شخصي: مسح الأصدقاء، الخروج من السيرفرات، وإرسال رسائل للجميع.</p>
+                <div class="input-group">
+                    <label>توكن شخصي (User Token)</label>
+                    <input type="password" id="nukeuser-token" placeholder="User Token..." oninput="validateToken('nukeuser')">
+                    <div class="token-status" id="nukeuser-status"></div>
+                </div>
+                <div class="input-group"><label>رسالة تُرسل للجميع</label><input type="text" id="nukeuser-msg" placeholder="الرسالة..."></div>
+                <button onclick="sendAction('nukeuser', 'destroy')">تدمير الحساب</button>
+            </div>
+        </div>
+
+        <!-- قسم نسخ سيرفر -->
+        <div id="clone" class="tab-content">
+            <div class="card">
+                <h2>نسخ سيرفر</h2>
+                <p class="desc">نسخ هيكل السيرفر (أسماء، رتب، قنوات، أيقونة) إلى سيرفر آخر.</p>
+                <div class="input-group">
+                    <label>توكن البوت (Bot Token)</label>
+                    <input type="password" id="clone-token" placeholder="ضع توكن البوت هنا..." oninput="validateToken('clone')">
+                    <div class="token-status" id="clone-status"></div>
+                </div>
+                <div class="input-group"><label>ID السيرفر المصدر</label><input type="text" id="clone-source" placeholder="Source ID"></div>
+                <div class="input-group"><label>ID السيرفر الهدف</label><input type="text" id="clone-target" placeholder="Target ID"></div>
+                <button onclick="sendAction('clone', 'clone')">بدء النسخ</button>
+            </div>
+        </div>
+
+        <!-- قسم مولد 2FA -->
+        <div id="2fa" class="tab-content">
+            <div class="card">
+                <h2>مولد 2FA (TOTP)</h2>
+                <p class="desc">أداة لتوليد أكواد التحقق بخطوتين (Google Authenticator) من المفتاح السري.</p>
+                <div class="input-group">
+                    <label>المفتاح السري (Secret Key)</label>
+                    <input type="text" id="2fa-secret" placeholder="مثال: JBSWY3DPEHPK3PXP">
+                </div>
+                <button onclick="generate2FA()">توليد الكود</button>
+                <div id="2fa-result" style="margin-top:20px; font-size:24px; text-align:center; font-weight:bold; color:#2ecc71; letter-spacing:5px;"></div>
+            </div>
+        </div>
+
+        <!-- قسم فحص الملفات -->
+        <div id="scanner" class="tab-content">
+            <div class="card">
+                <h2>فحص الملفات (Malware Scanner)</h2>
+                <p class="desc">ارفع أي ملف لاستخراج بصمته (SHA-256) وفحصه عبر قاعدة بيانات VirusTotal لمعرفة إذا كان ملغماً.</p>
+                <div class="input-group">
+                    <label>اختر الملف (يدعم أي صيغة)</label>
+                    <input type="file" id="file-input" style="padding:10px; background:#111; border:1px solid #333;">
+                </div>
+                <button onclick="scanFile()">فحص الملف</button>
+                <div id="scan-result" style="margin-top:20px; text-align:center; font-size:16px;"></div>
+            </div>
+        </div>
+
+        <!-- قسم لوحة الإدارة -->
+        <div id="admin" class="tab-content">
+            <div class="card">
+                <h2>لوحة الإدارة</h2>
+                <div class="input-group"><label>مفتاح الإدارة</label><input type="password" id="admin-key" placeholder="Admin Key"></div>
+                <button onclick="checkAdmin()">دخول</button>
+                
+                <div id="admin-actions" style="display:none; margin-top:20px;">
+                    <button onclick="generateVipKey()" style="background-color:#3498db; border-color:#3498db; color:#fff;">توليد مفتاح VIP</button>
+                    <div id="generated-keys" style="margin-top:15px; font-family:monospace; color:#2ecc71; font-size:16px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- قسم VIP -->
+        <div id="vip" class="tab-content">
+            <div id="vip-redeem-box" class="card">
+                <h2>تفعيل VIP</h2>
+                <p class="desc">أدخل مفتاح التفعيل للوصول لأدوات VIP.</p>
+                <div class="input-group"><label>مفتاح VIP</label><input type="text" id="redeem-key" placeholder="VIP-XXXXX"></div>
+                <button onclick="redeemVip()">تفعيل</button>
+            </div>
+
+            <!-- أدوات VIP بعد التفعيل -->
+            <div id="vip-tools-box" class="card" style="display:none;">
+                <h2>أدوات VIP</h2>
+                
+                <!-- أداة تبنيد حساب -->
+                <div style="background:#111; padding:20px; border-radius:8px; border:1px solid #333; margin-bottom:20px;">
+                    <h3 style="margin-bottom:10px; color:#e74c3c;">تبنيد حساب دسكورد (Account Ban)</h3>
+                    <p class="desc">إرسال بلاغات ضخمة من توكنات بشرية متعددة لتبنيد حساب شخص نهائياً.</p>
+                    <div class="input-group">
+                        <label>توكنات البشر (User Tokens - سطر لكل توكن)</label>
+                        <textarea id="vip-ban-tokens" placeholder="توكن 1&#10;توكن 2..." style="width:100%; height:80px; padding:10px; background:#000; color:#fff; border:1px solid #333; border-radius:8px; font-family:monospace;"></textarea>
+                    </div>
+                    <div class="input-group"><label>ID الحساب المراد تبنيده</label><input type="text" id="vip-ban-target" placeholder="User ID"></div>
+                    <div class="input-group"><label>السبب</label><input type="text" id="vip-ban-reason" value="Child Abuse / Terrorism"></div>
+                    <button onclick="sendAction('vip-ban', 'account_ban')">بدء التبنيد</button>
+                </div>
+
+                <div style="background:#111; padding:20px; border-radius:8px; border:1px solid #333;">
+                    <h3 style="margin-bottom:10px; color:#e74c3c;">باند الجميع (VIP Ban All)</h3>
+                    <div class="input-group">
+                        <label>توكن البوت (Bot Token)</label>
+                        <input type="password" id="vip-token" placeholder="ضع توكن البوت هنا..." oninput="validateToken('vip')">
+                        <div class="token-status" id="vip-status"></div>
+                    </div>
+                    <div class="input-group"><label>ID السيرفر</label><input type="text" id="vip-guild" placeholder="Guild ID"></div>
+                    <button onclick="sendAction('vip', 'banall')">تنفيذ باند VIP</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- الكونسول -->
+        <div class="console" id="console">
+            <p>[System] Waiting for input...</p>
+        </div>
+    </div>
+
+    <script>
+        let isAdmin = false;
+        const tokens = {}; 
+        
+        let vipKeys = ["VIP-TEST-123"];
+        let isVipActive = false;
+
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            
+            const targetTab = document.getElementById(tabId);
+            if(targetTab) {
+                targetTab.style.display = 'block';
+                setTimeout(() => targetTab.classList.add('active'), 10);
+            }
+            if(element) element.classList.add('active');
+
+            if (tabId === 'vip') {
+                if (isVipActive) {
+                    document.getElementById('vip-redeem-box').style.display = 'none';
+                    document.getElementById('vip-tools-box').style.display = 'block';
+                } else {
+                    document.getElementById('vip-redeem-box').style.display = 'block';
+                    document.getElementById('vip-tools-box').style.display = 'none';
+                }
+            }
+        }
+
+        function log(msg, type = 'info') {
+            const consoleDiv = document.getElementById('console');
+            const p = document.createElement('p');
+            p.textContent = `> ${msg}`;
+            if (type === 'success') p.className = 'success';
+            if (type === 'error') p.className = 'error';
+            consoleDiv.appendChild(p);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        async function validateToken(prefix) {
+            const input = document.getElementById(`${prefix}-token`);
+            const status = document.getElementById(`${prefix}-status`);
+            if(!input || !status) return;
+            
+            const token = input.value.trim();
+            
+            if (token.length < 50) {
+                status.textContent = "";
+                return;
+            }
+
+            status.textContent = "جاري التحقق...";
+            status.style.color = "#aaa";
+
+            try {
+                let headers = { 'Authorization': token };
+                let res = await fetch(`https://discord.com/api/v10/users/@me`, { headers });
+                let isBot = false;
+
+                if (res.status === 401) {
+                    headers = { 'Authorization': `Bot ${token}` };
+                    res = await fetch(`https://discord.com/api/v10/users/@me`, { headers });
+                    if (res.status === 200) isBot = true;
+                }
+
+                if (res.status === 200) {
+                    const data = await res.json();
+                    tokens[prefix] = { token, isBot };
+                    status.textContent = `✅ متصل: ${data.username} (${isBot ? 'Bot' : 'User'})`;
+                    status.style.color = "#fff";
+                    log(`تم التحقق من التوكن: ${prefix}`, 'success');
+                } else {
+                    status.textContent = "❌ توكن غير صالح";
+                    status.style.color = "#ff3333";
+                }
+            } catch (e) {
+                status.textContent = "❌ خطأ في الاتصال";
+                status.style.color = "#ff3333";
+            }
+        }
+
+        async function sendAction(prefix, actionType) {
+            const noTokenTools = ['webhook'];
+            if (!noTokenTools.includes(prefix) && !tokens[prefix] && prefix !== 'vip-ban') {
+                return log("الرجاء إدخال وفحص التوكن أولاً", 'error');
+            }
+            
+            log(`جاري إرسال الأمر (${actionType}) للسيرفر...`);
+            
+            let payload = { 
+                token: tokens[prefix] ? tokens[prefix].token : null, 
+                isBot: tokens[prefix] ? tokens[prefix].isBot : false,
+                action: actionType
+            };
+
+            if (prefix === 'nuke') {
+                payload.guild = document.getElementById('nuke-guild').value;
+                payload.name = document.getElementById('nuke-name').value;
+                payload.nickname = document.getElementById('nuke-nickname').value;
+                payload.channels = document.getElementById('nuke-channels').value;
+                payload.msg = document.getElementById('nuke-msg').value;
+                payload.mentions = document.getElementById('nuke-mentions').value;
+                payload.banall = document.getElementById('nuke-banall').checked;
+                payload.delroles = document.getElementById('nuke-delroles').checked;
+                payload.delchannels = document.getElementById('nuke-delchannels').checked;
+            } else if (prefix === 'spam') {
+                payload.channel = document.getElementById('spam-channel').value;
+                payload.msg = document.getElementById('spam-msg').value;
+                payload.amount = document.getElementById('spam-amount').value;
+                payload.mention = document.getElementById('spam-mention').checked;
+            } else if (prefix === 'webhook') {
+                payload.url = document.getElementById('wh-url').value;
+                payload.msg = document.getElementById('wh-msg').value;
+                payload.amount = document.getElementById('wh-amount').value;
+            } else if (prefix === 'report') {
+                payload.guild = document.getElementById('report-guild').value;
+                payload.user = document.getElementById('report-user').value;
+                payload.reason = document.getElementById('report-reason').value;
+                payload.amount = document.getElementById('report-amount').value;
+            } else if (prefix === 'banuser') {
+                payload.guild = document.getElementById('banuser-guild').value;
+                payload.userid = document.getElementById('banuser-userid').value;
+            } else if (prefix === 'nukeuser') {
+                payload.msg = document.getElementById('nukeuser-msg').value;
+            } else if (prefix === 'clone') {
+                payload.source = document.getElementById('clone-source').value;
+                payload.target = document.getElementById('clone-target').value;
+            } else if (prefix === 'vip-ban') {
+                payload.tokens = document.getElementById('vip-ban-tokens').value;
+                payload.target = document.getElementById('vip-ban-target').value;
+                payload.reason = document.getElementById('vip-ban-reason').value;
+            } else if (prefix === 'vip') {
+                payload.guild = document.getElementById('vip-guild').value;
+            }
+
+            try {
+                const API_ENDPOINT = "/api/execute"; 
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (response.ok) log(`تم تنفيذ ${actionType} بنجاح!`, 'success');
+                else log(`فشل التنفيذ: ${result.message || 'خطأ'}`, 'error');
+            } catch (e) {
+                log("تنبيه: الواجهة جاهزة. يرجى ربط السيرفر الخلفي (Backend) لتفعيل الأوامر.", 'error');
+            }
+        }
+
+        function generate2FA() {
+            const secret = document.getElementById('2fa-secret').value.trim().toUpperCase();
+            if (!secret) return log("أدخل المفتاح السري أولاً", "error");
+            
+            try {
+                const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+                let bits = "";
+                for (let i = 0; i < secret.length; i++) {
+                    const val = base32chars.indexOf(secret.charAt(i));
+                    if (val === -1) throw new Error("Invalid Base32");
+                    bits += val.toString(2).padStart(5, '0');
+                }
+                const bytes = [];
+                for (let i = 0; i + 8 <= bits.length; i += 8) {
+                    bytes.push(parseInt(bits.substring(i, i + 8), 2));
+                }
+                
+                const epoch = Math.round(new Date().getTime() / 1000.0);
+                const time = Math.floor(epoch / 30);
+                
+                const timeHex = time.toString(16).padStart(16, '0');
+                const timeBytes = [];
+                for (let i = 0; i < 8; i++) {
+                    timeBytes.push(parseInt(timeHex.substr(i * 2, 2), 16));
+                }
+                
+                const key = new Uint8Array(bytes);
+                const msg = new Uint8Array(timeBytes);
+                
+                window.crypto.subtle.importKey(
+                    "raw", key, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+                ).then(cryptoKey => {
+                    return window.crypto.subtle.sign("HMAC", cryptoKey, msg);
+                }).then(signature => {
+                    const h = new Uint8Array(signature);
+                    const offset = h[h.length - 1] & 0xf;
+                    const code = ((h[offset] & 0x7f) << 24 |
+                                  (h[offset + 1] & 0xff) << 16 |
+                                  (h[offset + 2] & 0xff) << 8 |
+                                  (h[offset + 3] & 0xff)) % 1000000;
+                    document.getElementById('2fa-result').innerText = code.toString(). ifpadStart(6, '0');
+                    (! log("تم توليد كود 2FA بنfileجاح", "success");
+                }).catch(errInput => {
+                    log("خطأ.f فيiles المفتاح السري", "error");
+                });
+            } catch (e) {
+                log("مفتاح سري غير صالح", "error");
+            }
+        }
+
+        async function scanFile() {
+            const fileInput = document.getElementById('file-input');
+            const resultDiv = document.getElementById('scan-result');
+            
+           .length) return log("الرجاء اختيار ملف أولاً", "error");
+            
+            const file = fileInput.files[0];
+            resultDiv.innerHTML = "جاري حساب البصمة...";
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                resultDiv.innerHTML = `
+                    <p style="color:#aaa; margin-bottom:10px;">بصمة الملف (SHA-256):</p>
+                    <code style="background:#000; padding:5px; display:block; word-break:break-all; margin-bottom:15px; color:#2ecc71;">${hashHex}</code>
+                    <a href="https://www.virustotal.com/gui/file/${hashHex}" target="_blank" style="display:inline-block; padding:10px 20px; background:#3498db; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">فحص في VirusTotal</a>
+                `;
+                log(`تم حساب البصمة للملف: ${file.name}`, "success");
+            } catch (e) {
+                resultDiv.innerHTML = "<span style='color:#ff3333'>حدث خطأ أثناء فحص الملف.</span>";
+                log("فشل فحص الملف", "error");
+            }
+        }
+
+        function checkAdmin() {
+            const key = document.getElementById('admin-key').value;
+            if (key === "LRZ-owner -on-top-67") {
+                isAdmin = true;
+                log("تم تسجيل الدخول كأدمن.", 'success');
+                document.getElementById('admin-actions').style.display = 'block';
+            } else {
+                log("مفتاح الأدمن خاطئ!", 'error');
+            }
+        }
+
+        function generateVipKey() {
+            const newKey = "VIP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            vipKeys.push(newKey);
+            const keysDiv = document.getElementById('generated-keys');
+            keysDiv.innerHTML += `<div style="margin-bottom:5px;">> ${newKey}</div>`;
+            log(`تم توليد مفتاح VIP: ${newKey}`, 'success');
+        }
+
+        function redeemVip() {
+            const key = document.getElementById('redeem-key').value.trim();
+            if (vipKeys.includes(key)) {
+                isVipActive = true;
+                log("تم تفعيل الـ VIP بنجاح!", 'success');
+                
+                const vipNav = document.getElementById('vipTabNav');
+                vipNav.classList.remove('vip-locked');
+                vipNav.style.color = "#fff";
+                
+                switchTab('vip', vipNav);
+            } else {
+                log("مفتاح VIP غير صحيح!", 'error');
+            }
+        }
+    </script>
+</body>
+</html>
